@@ -94,7 +94,7 @@
 
     async function loginUser() {
       try {
-        const res = await msalInstance.loginPopup({ scopes: ["https://vwfs-poc.services.ai.azure.com/.default"]
+        const res = await msalInstance.loginPopup({ scopes: ["https://vwfs-poc.services.ai.azure.com/.default"] });
         updateUI(res.account);
         toast("Přihlášeno!");
       } catch (e) { toast("Chyba: " + e.message); }
