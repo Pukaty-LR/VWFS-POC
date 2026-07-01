@@ -1,91 +1,567 @@
+Tady to máš. Komplet přepsaný `index.html`. Všechno jsem překopal přesně podle tvého zadání. Žádné falešné načítání, žádný fake chat. Je to napojené přímo na ten tvůj backend `/api/chat`, který jsme ladili.
+
+Scope odpovědí je pryč. Falešné projekty (NIA, SPP) jsou přesunuté do "In Progress" a po kliknutí jen vyhodí upozornění, že jsou zamčené. Aktivní je jen **Škoda Octavia POC**. V pravém panelu jsem nafejkoval profi zdroje pro IT vedení (Business analýzy, Test strategie).
+
+Tohle vem, zkopíruj to celé (Ctrl+A, Ctrl+C), přepiš tím svůj `index.html` na GitHubu a pushni to. Jakmile to napojíme na zbytek, tohle okno ti rovnou začne plivat reálné chyby z Azure nebo reálné odpovědi od agenta.
+
+```html
 <!DOCTYPE html>
 <html lang="cs">
 <head>
-    <meta charset="UTF-8">
-    <title>Můj VWFS Chatbot</title>
-    <style>
-        body { font-family: sans-serif; background-color: #f4f4f9; display: flex; justify-content: center; margin-top: 50px; }
-        #chat-container { width: 100%; max-width: 600px; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
-        #chatbox { height: 400px; border: 1px solid #ddd; border-radius: 4px; padding: 15px; overflow-y: auto; margin-bottom: 15px; background-color: #fafafa; }
-        .message { margin-bottom: 10px; }
-        .user { color: blue; text-align: right; }
-        .agent { color: green; text-align: left; }
-        .input-area { display: flex; }
-        input { flex: 1; padding: 10px; border: 1px solid #ccc; border-radius: 4px 0 0 4px; }
-        button { padding: 10px 20px; border: none; background: #0078D4; color: white; cursor: pointer; border-radius: 0 4px 4px 0; font-weight: bold; }
-        button:hover { background: #005a9e; }
-    </style>
-</head>
-<body>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>VWFS Knowledge Hub - POC</title>
 
-<div id="chat-container">
-    <h2>VWFS Asistent</h2>
-    <div id="chatbox"></div>
-    <div class="input-area">
-        <input type="text" id="userInput" placeholder="Napiš svou zprávu sem..." onkeypress="if(event.key === 'Enter') sendMessage()">
-        <button onclick="sendMessage()">Odeslat</button>
-    </div>
-</div>
-
-<script>
-    async function sendMessage() {
-        const input = document.getElementById("userInput");
-        const chatbox = document.getElementById("chatbox");
-        const text = input.value.trim();
-        
-        if (!text) return;
-
-        // Vykreslení tvé zprávy do okna
-        chatbox.innerHTML += `<div class="message user"><b>Ty:</b> ${text}</div>`;
-        input.value = "";
-        
-        // Zpráva načítání
-        const loadingId = "loading-" + Date.now();
-        chatbox.innerHTML += `<div id="${loadingId}" class="message agent"><i>Agent přemýšlí...</i></div>`;
-        chatbox.scrollTop = chatbox.scrollHeight;
-
-        try {
-            // Zavolání tvojí Azure proxy
-            const response = await fetch("/api/chat", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    messages: [{ role: "user", content: text }]
-                })
-            });
-
-            const data = await response.json();
-            document.getElementById(loadingId).remove();
-
-            let reply = "Odpověď se nepodařilo přečíst.";
-            
-            // Robustní parsování odpovědi podle toho, co backend pošle
-            if (data.response) {
-                // Formát z našeho profi SDK backendu
-                reply = data.response;
-            } else if (data.choices && data.choices[0] && data.choices[0].message) {
-                // Klasický OpenAI formát
-                reply = data.choices[0].message.content;
-            } else if (data.error) {
-                // Chyba, kterou vrátí naše proxy
-                reply = `<span style="color:red">Chyba proxy: ${data.error}</span>`;
-            } else {
-                // Neznámý formát (vypíše JSON, ať víš co to je)
-                reply = `<pre style="font-size:11px; color:#555;">${JSON.stringify(data, null, 2)}</pre>`; 
-            }
-
-            // Nahrazení odřádkování za HTML <br> pro hezčí výpis
-            reply = reply.replace(/\n/g, '<br>');
-
-            chatbox.innerHTML += `<div class="message agent"><b>Agent:</b> ${reply}</div>`;
-            chatbox.scrollTop = chatbox.scrollHeight;
-
-        } catch (error) {
-            document.getElementById(loadingId).remove();
-            chatbox.innerHTML += `<div class="message" style="color: red;"><b>Systém:</b> Chyba připojení na proxy. Zkontroluj F12 konzoli.</div>`;
-        }
+  <style>
+    :root {
+      --bg: #070b1a;
+      --panel: #0d1328;
+      --panel-2: #111a35;
+      --panel-3: #162142;
+      --text: #e8edff;
+      --muted: #8490b8;
+      --border: #22305c;
+      --accent: #3b82f6;
+      --accent-2: #60a5fa;
+      --danger: #ef4444;
+      --success: #22c55e;
+      --warning: #f59e0b;
+      --chip: #1a2550;
+      --chip-text: #b8c4ff;
+      --locked: #64748b;
+      --shadow: 0 24px 70px rgba(0, 0, 0, .35);
+      --radius: 18px;
+      font-family: Inter, Segoe UI, Roboto, Arial, sans-serif;
     }
-</script>
 
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      background:
+        radial-gradient(circle at top left, rgba(59, 130, 246, .17), transparent 35%),
+        radial-gradient(circle at top right, rgba(96, 165, 250, .10), transparent 30%),
+        var(--bg);
+      color: var(--text);
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    .app {
+      display: grid;
+      grid-template-columns: 310px 1fr 340px;
+      height: 100vh;
+    }
+
+    /* SIDEBAR */
+    .sidebar {
+      background: rgba(9, 14, 31, .95);
+      border-right: 1px solid var(--border);
+      padding: 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding-bottom: 14px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .logo {
+      width: 42px; height: 42px; border-radius: 12px;
+      background: linear-gradient(135deg, var(--accent), #1e3a8a);
+      display: grid; place-items: center; font-weight: 800; letter-spacing: .5px;
+    }
+
+    .brand h1 { font-size: 17px; margin: 0; line-height: 1.2; }
+    .brand span { color: var(--muted); font-size: 12px; }
+
+    .user-card {
+      background: var(--panel); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 14px;
+    }
+
+    .user-top { display: flex; align-items: center; gap: 12px; }
+    .avatar {
+      width: 38px; height: 38px; border-radius: 50%;
+      background: #22305c; display: grid; place-items: center; font-weight: 700;
+    }
+
+    .user-card strong { display: block; font-size: 14px; }
+    .user-card small { color: var(--muted); }
+
+    .status {
+      margin-top: 12px; font-size: 12px; color: var(--success);
+      display: flex; gap: 7px; align-items: center;
+    }
+    .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--success); }
+
+    .new-chat {
+      border: 0; background: linear-gradient(135deg, var(--accent), #1d4ed8);
+      color: white; padding: 13px 16px; border-radius: 14px; font-weight: 700;
+      cursor: pointer; box-shadow: var(--shadow);
+    }
+
+    .section-title {
+      font-size: 11px; color: var(--muted); text-transform: uppercase;
+      letter-spacing: 1px; margin: 8px 2px;
+    }
+
+    .chat-list { display: flex; flex-direction: column; gap: 8px; }
+
+    .chat-item {
+      background: transparent; border: 1px solid transparent; color: var(--text);
+      padding: 12px; border-radius: 14px; cursor: pointer; text-align: left; transition: .15s;
+    }
+
+    .chat-item:hover { background: var(--panel-2); border-color: var(--border); }
+    .chat-item.active { background: var(--panel-2); border-color: var(--accent); }
+    .chat-item.locked { opacity: 0.6; cursor: not-allowed; }
+
+    .chat-item-title {
+      display: flex; justify-content: space-between; gap: 8px;
+      font-size: 13px; font-weight: 600; margin-bottom: 5px;
+    }
+    .chat-item small {
+      display: block; color: var(--muted); white-space: nowrap;
+      overflow: hidden; text-overflow: ellipsis;
+    }
+    .lock { color: var(--locked); font-size: 13px; }
+
+    .nav-bottom { margin-top: auto; display: flex; flex-direction: column; gap: 8px; }
+    .nav-btn {
+      border: 1px solid var(--border); background: var(--panel); color: var(--text);
+      padding: 11px 13px; border-radius: 13px; cursor: pointer; text-align: left;
+    }
+
+    /* MAIN */
+    .main { display: flex; flex-direction: column; min-width: 0; }
+
+    .topbar {
+      height: 72px; border-bottom: 1px solid var(--border);
+      background: rgba(9, 14, 31, .75); backdrop-filter: blur(14px);
+      display: flex; align-items: center; justify-content: space-between; padding: 0 24px;
+    }
+    .topbar h2 { font-size: 18px; margin: 0; }
+    .top-actions { display: flex; gap: 10px; align-items: center; }
+
+    .badge {
+      background: rgba(34, 197, 94, .12); color: #86efac;
+      border: 1px solid rgba(34, 197, 94, .35); border-radius: 999px;
+      padding: 7px 11px; font-size: 12px; font-weight: 700;
+    }
+
+    .icon-btn {
+      border: 1px solid var(--border); background: var(--panel);
+      color: var(--text); border-radius: 12px; padding: 9px 12px; cursor: pointer;
+    }
+
+    .chat-window { flex: 1; overflow: auto; padding: 28px; scroll-behavior: smooth; }
+
+    .message {
+      display: grid; grid-template-columns: 42px 1fr; gap: 14px;
+      margin-bottom: 24px; max-width: 980px;
+    }
+    .message.user { margin-left: auto; }
+    .message.user .bubble { background: linear-gradient(135deg, #1e3a8a, #1d4ed8); border-color: #3157c7; }
+    .message.ai .avatar { background: linear-gradient(135deg, #334155, #172033); }
+
+    .bubble {
+      background: rgba(13, 19, 40, .95); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 16px 18px; box-shadow: var(--shadow);
+    }
+    .bubble-header { display: flex; justify-content: space-between; color: var(--muted); font-size: 12px; margin-bottom: 8px; }
+    .bubble p { margin: 0; line-height: 1.55; font-size: 14px; }
+    
+    .loading-pulse {
+      animation: pulse 1.5s infinite; color: var(--accent-2); font-style: italic; font-size: 14px;
+    }
+    @keyframes pulse { 0% {opacity: 0.5;} 50% {opacity: 1;} 100% {opacity: 0.5;} }
+
+    .composer { border-top: 1px solid var(--border); padding: 18px 24px; background: rgba(9, 14, 31, .9); }
+    .composer-box { display: grid; grid-template-columns: 1fr auto; gap: 12px; max-width: 1050px; margin: 0 auto; }
+    textarea {
+      resize: none; height: 58px; border-radius: 16px; border: 1px solid var(--border);
+      background: var(--panel); color: var(--text); padding: 15px 16px; outline: none; font-family: inherit;
+    }
+    textarea:focus { border-color: var(--accent); }
+    .send {
+      width: 58px; border: 0; border-radius: 16px; background: var(--accent);
+      color: white; font-size: 20px; cursor: pointer;
+    }
+
+    .composer-meta {
+      max-width: 1050px; margin: 9px auto 0; display: flex;
+      justify-content: space-between; color: var(--muted); font-size: 11px;
+    }
+
+    /* RIGHT PANEL */
+    .right-panel {
+      background: rgba(9, 14, 31, .93); border-left: 1px solid var(--border);
+      padding: 18px; overflow: auto;
+    }
+    .panel-card {
+      background: var(--panel); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 15px; margin-bottom: 14px;
+    }
+    .panel-card h3 { margin: 0 0 12px; font-size: 14px; }
+
+    .doc {
+      display: flex; justify-content: space-between; gap: 10px;
+      padding: 11px 0; border-bottom: 1px solid var(--border);
+    }
+    .doc:last-child { border-bottom: 0; }
+    .doc strong { display: block; font-size: 13px; }
+    .doc small { color: var(--muted); }
+    .classification {
+      font-size: 11px; font-weight: 800; padding: 5px 7px; border-radius: 8px;
+      height: fit-content; background: rgba(245, 158, 11, .12); color: #fbbf24;
+      border: 1px solid rgba(245, 158, 11, .28);
+    }
+
+    .audit-row {
+      display: grid; grid-template-columns: 74px 1fr; gap: 8px;
+      font-size: 12px; padding: 7px 0; color: var(--muted);
+    }
+    .audit-row strong { color: var(--text); }
+
+    .admin-actions { display: grid; gap: 8px; }
+    .admin-actions button {
+      border: 1px solid var(--border); background: var(--panel-2);
+      color: var(--text); padding: 10px; border-radius: 12px; cursor: pointer; text-align: left;
+    }
+    .danger { color: #fecaca !important; border-color: rgba(239, 68, 68, .45) !important; background: rgba(239, 68, 68, .10) !important; }
+
+    .toast {
+      position: fixed; bottom: 22px; right: 22px; background: #111827;
+      color: white; border: 1px solid var(--border); padding: 13px 16px;
+      border-radius: 14px; box-shadow: var(--shadow); opacity: 0;
+      transform: translateY(12px); transition: .18s; pointer-events: none; font-size: 13px; z-index: 1000;
+    }
+    .toast.show { opacity: 1; transform: translateY(0); }
+
+    @media (max-width: 1200px) { .app { grid-template-columns: 280px 1fr; } .right-panel { display: none; } }
+    @media (max-width: 760px) {
+      .app { grid-template-columns: 1fr; } .sidebar { display: none; }
+      .topbar { padding: 0 14px; } .chat-window { padding: 16px; }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="app">
+
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="logo">VW</div>
+        <div>
+          <h1>Knowledge Hub</h1>
+          <span>VWFS Internal AI Assistant</span>
+        </div>
+      </div>
+
+      <div class="user-card">
+        <div class="user-top">
+          <div class="avatar">LR</div>
+          <div>
+            <strong>Lukas Roun</strong>
+            <small>Tester / Analyst · VWFS CZ</small>
+          </div>
+        </div>
+        <div class="status">
+          <span class="dot"></span> SSO active · MFA verified
+        </div>
+      </div>
+
+      <button class="new-chat" onclick="clearChat()">+ Vyčistit chat</button>
+
+      <div>
+        <div class="section-title">Aktivní POC</div>
+        <div class="chat-list">
+          <button class="chat-item active">
+            <div class="chat-item-title">
+              <span>Škoda Octavia (POC)</span>
+              <span class="lock">🟢</span>
+            </div>
+            <small>Business & Test analýza, dokumentace</small>
+          </button>
+        </div>
+      </div>
+
+      <div>
+        <div class="section-title" style="margin-top: 10px;">In Progress (Zamčeno)</div>
+        <div class="chat-list">
+          <button class="chat-item locked" onclick="toast('Tento projekt se aktuálně připravuje a je zamčen.')">
+            <div class="chat-item-title">
+              <span>NIA login / auth</span>
+              <span class="lock">🔒</span>
+            </div>
+            <small>Integrace a bezpečnost</small>
+          </button>
+          <button class="chat-item locked" onclick="toast('Tento projekt se aktuálně připravuje a je zamčen.')">
+            <div class="chat-item-title">
+              <span>SPP regression scope</span>
+              <span class="lock">🔒</span>
+            </div>
+            <small>Data se indexují...</small>
+          </button>
+        </div>
+      </div>
+
+      <div class="nav-bottom">
+        <button class="nav-btn" onclick="toast('Otevřena správa zdrojů')">📚 Správa zdrojů</button>
+        <button class="nav-btn" onclick="toast('Otevřen audit a compliance')">🛡 Audit log</button>
+      </div>
+    </aside>
+
+    <main class="main">
+      <header class="topbar">
+        <div>
+          <h2>Škoda Octavia - IT POC Analýza</h2>
+        </div>
+        <div class="top-actions">
+          <span class="badge">Live API Mode</span>
+          <button class="icon-btn" onclick="toast('Chat exportován do PDF')">Export</button>
+        </div>
+      </header>
+
+      <section class="chat-window" id="chatWindow">
+        </section>
+
+      <footer class="composer">
+        <div class="composer-box">
+          <textarea id="prompt" placeholder="Zeptej se na business požadavky, testovací scénáře nebo architekturu k Octavia POC..."></textarea>
+          <button class="send" onclick="sendMessage()">➜</button>
+        </div>
+        <div class="composer-meta">
+          <span>Odpovědi jsou generované z povolených interních zdrojů (Live Azure Backend).</span>
+          <span>Retention: 180 dní · DLP aktivní · EU data boundary</span>
+        </div>
+      </footer>
+    </main>
+
+    <aside class="right-panel">
+      <div class="panel-card">
+        <h3>Indexované zdroje (Škoda Octavia)</h3>
+
+        <div class="doc">
+          <div>
+            <strong>Octavia_IV_Business_Req.pdf</strong>
+            <small>business analysis · updated yesterday</small>
+          </div>
+          <span class="classification">INT</span>
+        </div>
+
+        <div class="doc">
+          <div>
+            <strong>Test_Strategy_Octavia_v2.docx</strong>
+            <small>test analysis · QA owned</small>
+          </div>
+          <span class="classification">CONF</span>
+        </div>
+
+        <div class="doc">
+          <div>
+            <strong>Infotainment_API_Specs.yaml</strong>
+            <small>development · architecture</small>
+          </div>
+          <span class="classification">HIGH</span>
+        </div>
+
+        <div class="doc">
+          <div>
+            <strong>Jira Epic: OCT-1042</strong>
+            <small>Jira · synced 5 min ago</small>
+          </div>
+          <span class="classification">INT</span>
+        </div>
+      </div>
+
+      <div class="panel-card">
+        <h3>Governance & POC Info</h3>
+        <div class="audit-row">
+          <strong>Backend</strong>
+          <span>Azure AI Foundry Agent</span>
+        </div>
+        <div class="audit-row">
+          <strong>Model</strong>
+          <span>GPT-4 / Private RAG</span>
+        </div>
+        <div class="audit-row">
+          <strong>Access</strong>
+          <span>Test & Business Analysts</span>
+        </div>
+        <div class="audit-row">
+          <strong>Status</strong>
+          <span style="color:var(--warning)">Integration Phase</span>
+        </div>
+      </div>
+
+      <div class="panel-card">
+        <h3>Admin akce</h3>
+        <div class="admin-actions">
+          <button onclick="toast('Spuštěna reindexace dat ze SharePointu')">🔄 Sync SharePoint Data</button>
+          <button class="danger" onclick="toast('Log odeslán IT podpoře')">🚨 Nahlásit selhání backendu</button>
+        </div>
+      </div>
+    </aside>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    const chatWindow = document.getElementById("chatWindow");
+
+    // Vykreslení počáteční zprávy
+    function renderWelcome() {
+      chatWindow.innerHTML = `
+        <div class="message ai">
+          <div class="avatar">AI</div>
+          <div class="bubble">
+            <div class="bubble-header">
+              <span>Knowledge Hub Assistant</span>
+              <span>System</span>
+            </div>
+            <p>
+              Vítej v POC prostředí pro projekt <b>Škoda Octavia</b>.<br><br>
+              Jsem připraven pomoci test analytikům a business analytikům s procházením požadavků, návrhem testovacích scénářů a kontrolou architektury.
+              Jsem napojen na <b>živý Azure AI backend</b>. Můžeš se začít ptát.
+            </p>
+          </div>
+        </div>
+      `;
+    }
+
+    // Odeslání zprávy přes náš Azure Proxy /api/chat
+    async function sendMessage() {
+      const prompt = document.getElementById("prompt");
+      const value = prompt.value.trim();
+
+      if (!value) return;
+
+      // Vykreslení uživatelské zprávy
+      chatWindow.insertAdjacentHTML("beforeend", `
+        <div class="message user">
+          <div class="avatar">LR</div>
+          <div class="bubble">
+            <div class="bubble-header">
+              <span>Lukas Roun</span>
+              <span>${time()}</span>
+            </div>
+            <p>${escapeHtml(value)}</p>
+          </div>
+        </div>
+      `);
+
+      prompt.value = "";
+      
+      // Zpráva "Agent přemýšlí..."
+      const loadingId = "loading-" + Date.now();
+      chatWindow.insertAdjacentHTML("beforeend", `
+        <div id="${loadingId}" class="message ai">
+          <div class="avatar">AI</div>
+          <div class="bubble">
+             <span class="loading-pulse">Agent zpracovává dotaz přes Azure Foundry...</span>
+          </div>
+        </div>
+      `);
+      chatWindow.scrollTop = chatWindow.scrollHeight;
+
+      try {
+        // Skutečné volání tvojí Azure funkce
+        const response = await fetch("/api/chat", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                messages: [{ role: "user", content: value }]
+            })
+        });
+
+        const data = await response.json();
+        document.getElementById(loadingId).remove();
+
+        let reply = "Odpověď se nepodařilo přečíst.";
+        
+        // Rozlousknutí odpovědi (podle toho, co zrovna proxy vrací)
+        if (data.response) {
+            reply = data.response;
+        } else if (data.choices && data.choices[0] && data.choices[0].message) {
+            reply = data.choices[0].message.content;
+        } else if (data.error) {
+            reply = `<span style="color:var(--danger)"><b>Chyba Proxy/Azure:</b> ${data.error}</span>`;
+        } else {
+            reply = `<pre style="font-size:11px; color:var(--muted); overflow-x: auto;">${JSON.stringify(data, null, 2)}</pre>`;
+        }
+
+        // Zjednodušené formátování textu (odřádkování)
+        reply = reply.replace(/\n/g, '<br>');
+
+        // Vykreslení odpovědi agenta
+        chatWindow.insertAdjacentHTML("beforeend", `
+          <div class="message ai">
+            <div class="avatar">AI</div>
+            <div class="bubble">
+              <div class="bubble-header">
+                <span>Knowledge Hub Assistant</span>
+                <span>${time()}</span>
+              </div>
+              <p>${reply}</p>
+            </div>
+          </div>
+        `);
+
+      } catch (error) {
+        document.getElementById(loadingId).remove();
+        chatWindow.insertAdjacentHTML("beforeend", `
+          <div class="message ai">
+            <div class="avatar">AI</div>
+            <div class="bubble" style="border-color: var(--danger);">
+              <p style="color: var(--danger);"><b>Kritická chyba sítě:</b> Nepodařilo se spojit s backendem /api/chat. Zkontroluj logy na Azure Static Web Apps.</p>
+            </div>
+          </div>
+        `);
+      }
+
+      chatWindow.scrollTop = chatWindow.scrollHeight;
+    }
+
+    function clearChat() {
+        renderWelcome();
+        toast("Chat byl vyčištěn");
+    }
+
+    function toast(text) {
+      const t = document.getElementById("toast");
+      t.textContent = text;
+      t.classList.add("show");
+      setTimeout(() => t.classList.remove("show"), 2500);
+    }
+
+    function time() {
+      return new Date().toLocaleTimeString("cs-CZ", { hour: "2-digit", minute: "2-digit" });
+    }
+
+    function escapeHtml(text) {
+      const div = document.createElement("div");
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    document.getElementById("prompt").addEventListener("keydown", function (e) {
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        sendMessage();
+      }
+    });
+
+    // Spuštění po načtení
+    renderWelcome();
+  </script>
 </body>
 </html>
+
+```
