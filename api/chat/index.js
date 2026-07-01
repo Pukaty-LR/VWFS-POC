@@ -1,24 +1,20 @@
 module.exports = async function (context, req) {
-    // 1. Získáme text zprávy z tvého webu
     let userMessage = "test";
     if (req.body && req.body.messages && req.body.messages.length > 0) {
         userMessage = req.body.messages[0].content;
     }
 
-    // 2. Vytáhneme klíč přímo z toho stringu, co jsi tam uložil (žádné další klikání v Azure!)
     const connString = process.env.FOUNDRY_CONN_STRING || "";
     const match = connString.match(/key=([^;]+)/);
     const apiKey = match ? match[1] : null;
 
     if (!apiKey) {
-        context.res = { status: 500, body: { error: "Nenašel jsem klíč v proměnné FOUNDRY_CONN_STRING." } };
+        context.res = { status: 200, body: { error: "Nenašel jsem klíč. Zkontroluj FOUNDRY_CONN_STRING." } };
         return;
     }
 
-    // 3. Toto je ten koncový bod, který už nám jednou odpověděl (tehdy tě stoplo jen OBO)
     const url = "https://vwfs-poc.services.ai.azure.com/api/projects/vwfs-poc/agents/VWFS-POC-Agent1/endpoint/protocols/openai/responses?api-version=2025-11-15-preview";
     
-    // 4. Zabaleno přesně tak, jak si o to Foundry řeklo v logu
     const payload = {
         createResponseRequest: {
             messages: [{ role: "user", content: userMessage }]
@@ -26,7 +22,6 @@ module.exports = async function (context, req) {
     };
 
     try {
-        // 5. Suplujeme standardní volání, žádné složité balíčky
         const response = await fetch(url, {
             method: "POST",
             headers: {
@@ -36,23 +31,25 @@ module.exports = async function (context, req) {
             body: JSON.stringify(payload)
         });
 
-        // 6. Robustní zpracování odpovědi
         const textResponse = await response.text();
-        let data;
-        try {
-            data = JSON.parse(textResponse);
-        } catch(e) {
-            data = { error: "Neplatný JSON od Foundry", raw: textResponse.substring(0, 200) };
-        }
         
+        // Pokud Azure vrátí chybu (např. 400 Bad Request), narveme ji do textu, ať ji web 100% ukáže
+        if (!response.ok) {
+            context.res = { 
+                status: 200, // Schválně posíláme 200, aby to náš web přijal a nevyhodil obecnou chybu
+                body: { error: `AZURE ODMÍTL DOTAZ: ${textResponse}` } 
+            };
+            return;
+        }
+
         context.res = {
-            status: response.status,
-            body: data
+            status: 200,
+            body: JSON.parse(textResponse)
         };
     } catch (error) {
         context.res = {
-            status: 500,
-            body: { error: "Kritická chyba spojení (proxy)", details: error.message }
+            status: 200,
+            body: { error: `Kritická chyba: ${error.message}` }
         };
     }
 };
