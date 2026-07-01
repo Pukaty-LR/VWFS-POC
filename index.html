@@ -3,8 +3,79 @@
 <head>
     <meta charset="UTF-8">
     <title>Můj VWFS Chatbot</title>
+    <style>
+        body { font-family: sans-serif; background-color: #f4f4f9; display: flex; justify-content: center; margin-top: 50px; }
+        #chat-container { width: 100%; max-width: 600px; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+        #chatbox { height: 400px; border: 1px solid #ddd; border-radius: 4px; padding: 15px; overflow-y: auto; margin-bottom: 15px; background-color: #fafafa; }
+        .message { margin-bottom: 10px; }
+        .user { color: blue; text-align: right; }
+        .agent { color: green; text-align: left; }
+        .input-area { display: flex; }
+        input { flex: 1; padding: 10px; border: 1px solid #ccc; border-radius: 4px 0 0 4px; }
+        button { padding: 10px 20px; border: none; background: #0078D4; color: white; cursor: pointer; border-radius: 0 4px 4px 0; font-weight: bold; }
+        button:hover { background: #005a9e; }
+    </style>
 </head>
 <body>
-    <h1>Test chatu - web funguje</h1>
+
+<div id="chat-container">
+    <h2>VWFS Asistent</h2>
+    <div id="chatbox"></div>
+    <div class="input-area">
+        <input type="text" id="userInput" placeholder="Napiš svou zprávu sem..." onkeypress="if(event.key === 'Enter') sendMessage()">
+        <button onclick="sendMessage()">Odeslat</button>
+    </div>
+</div>
+
+<script>
+    async function sendMessage() {
+        const input = document.getElementById("userInput");
+        const chatbox = document.getElementById("chatbox");
+        const text = input.value.trim();
+        
+        if (!text) return;
+
+        // Vykreslení tvé zprávy do okna
+        chatbox.innerHTML += `<div class="message user"><b>Ty:</b> ${text}</div>`;
+        input.value = "";
+        
+        // Zpráva načítání
+        const loadingId = "loading-" + Date.now();
+        chatbox.innerHTML += `<div id="${loadingId}" class="message agent"><i>Agent přemýšlí...</i></div>`;
+        chatbox.scrollTop = chatbox.scrollHeight;
+
+        try {
+            // Zavolání tvojí Azure proxy (žádné tokeny v prohlížeči!)
+            const response = await fetch("/api/chat", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                // Foundry většinou vyžaduje formát zpráv pole (messages array)
+                body: JSON.stringify({
+                    messages: [{ role: "user", content: text }]
+                })
+            });
+
+            const data = await response.json();
+            document.getElementById(loadingId).remove();
+
+            // Vydolování odpovědi od agenta z dat (upravíme, pokud by struktura z Foundry byla jiná)
+            let reply = "Odpověď se nepodařilo přečíst.";
+            if (data.choices && data.choices[0] && data.choices[0].message) {
+                reply = data.choices[0].message.content;
+            } else {
+                // Pokud Foundry pošle jiný formát, vypíše se syrový výstup, ať víme, co s tím dál
+                reply = JSON.stringify(data); 
+            }
+
+            chatbox.innerHTML += `<div class="message agent"><b>Agent:</b> ${reply}</div>`;
+            chatbox.scrollTop = chatbox.scrollHeight;
+
+        } catch (error) {
+            document.getElementById(loadingId).remove();
+            chatbox.innerHTML += `<div class="message" style="color: red;"><b>Systém:</b> Chyba připojení na proxy.</div>`;
+        }
+    }
+</script>
+
 </body>
 </html>
