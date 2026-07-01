@@ -1,31 +1,26 @@
 module.exports = async function (context, req) {
-    let userMessage = "test";
-    if (req.body && req.body.messages && req.body.messages.length > 0) {
-        userMessage = req.body.messages[0].content;
+    // 1. Očekáváme hlavičku Authorization s Bearer tokenem z frontendu
+    const authHeader = req.headers["authorization"] || req.headers["Authorization"];
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+        context.res = { status: 401, body: { error: "Ověření selhalo. Chybí platný Bearer token." } };
+        return;
     }
 
-    const connString = process.env.FOUNDRY_CONN_STRING || "";
-    const match = connString.match(/key=([^;]+)/);
-    const apiKey = match ? match[1] : null;
-
-    if (!apiKey) {
-        context.res = { status: 200, body: { error: "Nenašel jsem klíč. Zkontroluj FOUNDRY_CONN_STRING." } };
+    const userMessage = req.body?.messages?.[0]?.content;
+    if (!userMessage) {
+        context.res = { status: 400, body: { error: "Zpráva je prázdná." } };
         return;
     }
 
     const url = "https://vwfs-poc.services.ai.azure.com/api/projects/vwfs-poc/agents/VWFS-POC-Agent1/endpoint/protocols/openai/responses?api-version=2025-11-15-preview";
-    
-    const payload = {
-        createResponseRequest: {
-            messages: [{ role: "user", content: userMessage }]
-        }
-    };
+    const payload = { createResponseRequest: { messages: [{ role: "user", content: userMessage }] } };
 
     try {
+        // 2. Odeslání dotazu s Bearer tokenem (Nahrazujeme starý api-key)
         const response = await fetch(url, {
             method: "POST",
             headers: {
-                "api-key": apiKey,
+                "Authorization": authHeader, // Zde posíláme identitu uživatele do Foundry
                 "Content-Type": "application/json"
             },
             body: JSON.stringify(payload)
@@ -33,23 +28,13 @@ module.exports = async function (context, req) {
 
         const textResponse = await response.text();
         
-        // Pokud Azure vrátí chybu (např. 400 Bad Request), narveme ji do textu, ať ji web 100% ukáže
         if (!response.ok) {
-            context.res = { 
-                status: 200, // Schválně posíláme 200, aby to náš web přijal a nevyhodil obecnou chybu
-                body: { error: `AZURE ODMÍTL DOTAZ: ${textResponse}` } 
-            };
+            context.res = { status: 200, body: { error: `AZURE ODMÍTL DOTAZ: ${textResponse}` } };
             return;
         }
 
-        context.res = {
-            status: 200,
-            body: JSON.parse(textResponse)
-        };
+        context.res = { status: 200, body: JSON.parse(textResponse) };
     } catch (error) {
-        context.res = {
-            status: 200,
-            body: { error: `Kritická chyba: ${error.message}` }
-        };
+        context.res = { status: 500, body: { error: `Kritická chyba sítě: ${error.message}` } };
     }
 };
