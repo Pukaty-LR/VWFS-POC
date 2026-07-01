@@ -45,11 +45,10 @@
         chatbox.scrollTop = chatbox.scrollHeight;
 
         try {
-            // Zavolání tvojí Azure proxy (žádné tokeny v prohlížeči!)
+            // Zavolání tvojí Azure proxy
             const response = await fetch("/api/chat", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                // Foundry většinou vyžaduje formát zpráv pole (messages array)
                 body: JSON.stringify({
                     messages: [{ role: "user", content: text }]
                 })
@@ -58,21 +57,32 @@
             const data = await response.json();
             document.getElementById(loadingId).remove();
 
-            // Vydolování odpovědi od agenta z dat (upravíme, pokud by struktura z Foundry byla jiná)
             let reply = "Odpověď se nepodařilo přečíst.";
-            if (data.choices && data.choices[0] && data.choices[0].message) {
+            
+            // Robustní parsování odpovědi podle toho, co backend pošle
+            if (data.response) {
+                // Formát z našeho profi SDK backendu
+                reply = data.response;
+            } else if (data.choices && data.choices[0] && data.choices[0].message) {
+                // Klasický OpenAI formát
                 reply = data.choices[0].message.content;
+            } else if (data.error) {
+                // Chyba, kterou vrátí naše proxy
+                reply = `<span style="color:red">Chyba proxy: ${data.error}</span>`;
             } else {
-                // Pokud Foundry pošle jiný formát, vypíše se syrový výstup, ať víme, co s tím dál
-                reply = JSON.stringify(data); 
+                // Neznámý formát (vypíše JSON, ať víš co to je)
+                reply = `<pre style="font-size:11px; color:#555;">${JSON.stringify(data, null, 2)}</pre>`; 
             }
+
+            // Nahrazení odřádkování za HTML <br> pro hezčí výpis
+            reply = reply.replace(/\n/g, '<br>');
 
             chatbox.innerHTML += `<div class="message agent"><b>Agent:</b> ${reply}</div>`;
             chatbox.scrollTop = chatbox.scrollHeight;
 
         } catch (error) {
             document.getElementById(loadingId).remove();
-            chatbox.innerHTML += `<div class="message" style="color: red;"><b>Systém:</b> Chyba připojení na proxy.</div>`;
+            chatbox.innerHTML += `<div class="message" style="color: red;"><b>Systém:</b> Chyba připojení na proxy. Zkontroluj F12 konzoli.</div>`;
         }
     }
 </script>
