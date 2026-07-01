@@ -383,38 +383,44 @@
 
   <script>
     /* MSAL KONFIGURACE */
-    const msalInstance = new msal.PublicClientApplication({
+    const msalConfig = {
       auth: {
         clientId: "41e3c8da-a8a6-4184-b7d9-9e87ad92ff83",
-        authority: "https://login.microsoftonline.com/8659bccf-b2fe-4d28-b5be-04910dc7d193"
+        authority: "https://login.microsoftonline.com/8659bccf-b2fe-4d28-b5be-04910dc7d193",
+        redirectUri: window.location.origin // DŮLEŽITÉ: Musí být stejné jako v Azure!
       }
-    });
-
+    };
+    const msalInstance = new msal.PublicClientApplication(msalConfig);
     let activeAccount = null;
 
+    // Tato část zajistí, že se popup správně zavře a předá kontrolu hlavní stránce
+    msalInstance.initialize().then(() => {
+        const accounts = msalInstance.getAllAccounts();
+        if (accounts.length > 0) {
+            activeAccount = accounts[0];
+            updateUI(activeAccount);
+        }
+    });
+
     async function loginUser() {
-      // Změna: Explicitně vynucujeme popup a přidáváme debugování
       try {
-        console.log("Startuji loginPopup...");
-        const res = await msalInstance.loginPopup({ 
-            scopes: ["https://ai.azure.com/.default"],
-            prompt: "select_account" // Tohle vynutí výběr účtu a nezmizí to
-        });
-        
+        const res = await msalInstance.loginPopup({ scopes: ["https://ai.azure.com/.default"] });
         activeAccount = res.account;
-        msalInstance.setActiveAccount(activeAccount);
-        
-        document.getElementById("uiName").innerText = activeAccount.name;
-        document.getElementById("uiAv").innerText = activeAccount.name.substring(0,2).toUpperCase();
+        updateUI(activeAccount);
+        toast("Přihlášeno!");
+      } catch (e) { 
+        console.error(e);
+        toast("Chyba: " + e.message); 
+      }
+    }
+
+    function updateUI(account) {
+        activeAccount = account;
+        document.getElementById("uiName").innerText = account.name;
+        document.getElementById("uiAv").innerText = account.name.substring(0,2).toUpperCase();
         document.getElementById("loginBtn").style.display = "none";
         document.getElementById("clearBtn").style.display = "block";
         document.getElementById("prompt").placeholder = "Zeptej se na business požadavky...";
-        
-        toast("Přihlášeno: " + activeAccount.name);
-      } catch (e) { 
-        console.error("LOGIN CHYBA:", e);
-        toast("Chyba přihlášení: " + e.message); 
-      }
     }
 
     async function sendMessage() {
@@ -422,10 +428,11 @@
       const msg = prompt.value.trim();
       if (!msg || !activeAccount) return toast("Nejsi přihlášen!");
 
+      // Získání tokenu pro odeslání
       const tokenRes = await msalInstance.acquireTokenSilent({ scopes: ["https://ai.azure.com/.default"], account: activeAccount });
       
       const chatWindow = document.getElementById("chatWindow");
-      chatWindow.insertAdjacentHTML("beforeend", `<div class="message user"><div class="avatar">${activeAccount.name.substring(0,2).toUpperCase()}</div><div class="bubble"><p>${escapeHtml(msg)}</p></div></div>`);
+      chatWindow.insertAdjacentHTML("beforeend", `<div class="message user"><div class="bubble"><p>${escapeHtml(msg)}</p></div></div>`);
       prompt.value = "";
 
       const res = await fetch("/api/chat", {
@@ -435,15 +442,12 @@
       });
 
       const data = await res.json();
-      const reply = data.response || data.choices?.[0]?.message?.content || "Chyba.";
-      chatWindow.insertAdjacentHTML("beforeend", `<div class="message ai"><div class="avatar">AI</div><div class="bubble"><p>${reply.replace(/\n/g, '<br>')}</p></div></div>`);
+      const reply = data.response || data.choices?.[0]?.message?.content || "Chyba backendu.";
+      chatWindow.insertAdjacentHTML("beforeend", `<div class="message ai"><div class="bubble"><p>${reply.replace(/\n/g, '<br>')}</p></div></div>`);
       chatWindow.scrollTop = chatWindow.scrollHeight;
     }
 
-    function renderWelcome() {
-        document.getElementById("chatWindow").innerHTML = `<div class="message ai"><div class="avatar">AI</div><div class="bubble"><p>Vítej v POC pro Octavia. Přihlas se SSO vlevo.</p></div></div>`;
-    }
-
+    function renderWelcome() { document.getElementById("chatWindow").innerHTML = `<div class="message ai"><div class="bubble"><p>Vítej v POC pro Octavia. Přihlas se SSO vlevo.</p></div></div>`; }
     function clearChat() { renderWelcome(); toast("Chat vyčištěn"); }
     function toast(t) { const el = document.getElementById("toast"); el.textContent = t; el.classList.add("show"); setTimeout(() => el.classList.remove("show"), 2000); }
     function escapeHtml(text) { const div = document.createElement("div"); div.textContent = text; return div.innerHTML; }
