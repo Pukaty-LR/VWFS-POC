@@ -1,6 +1,5 @@
 module.exports = async function (context, req) {
-    // Tady na konci adresy je teď přidáno to ?api-version=...
-    const url = "https://vwfs-poc.services.ai.azure.com/api/projects/vwfs-poc/agents/VWFS-POC-Agent1/endpoint/protocols/openai/responses?api-version=2024-02-15-preview";
+    const url = "https://vwfs-poc.services.ai.azure.com/api/projects/vwfs-poc/agents/VWFS-POC-Agent1/endpoint/protocols/openai/responses?api-version=2025-11-15-preview";
     
     const response = await fetch(url, {
         method: "POST",
