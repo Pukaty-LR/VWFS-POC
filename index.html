@@ -393,16 +393,28 @@
     let activeAccount = null;
 
     async function loginUser() {
+      // Změna: Explicitně vynucujeme popup a přidáváme debugování
       try {
-        const res = await msalInstance.loginPopup({ scopes: ["https://ai.azure.com/.default"] });
+        console.log("Startuji loginPopup...");
+        const res = await msalInstance.loginPopup({ 
+            scopes: ["https://ai.azure.com/.default"],
+            prompt: "select_account" // Tohle vynutí výběr účtu a nezmizí to
+        });
+        
         activeAccount = res.account;
+        msalInstance.setActiveAccount(activeAccount);
+        
         document.getElementById("uiName").innerText = activeAccount.name;
         document.getElementById("uiAv").innerText = activeAccount.name.substring(0,2).toUpperCase();
         document.getElementById("loginBtn").style.display = "none";
         document.getElementById("clearBtn").style.display = "block";
         document.getElementById("prompt").placeholder = "Zeptej se na business požadavky...";
-        toast("Přihlášeno přes SSO!");
-      } catch (e) { toast("Chyba přihlášení"); }
+        
+        toast("Přihlášeno: " + activeAccount.name);
+      } catch (e) { 
+        console.error("LOGIN CHYBA:", e);
+        toast("Chyba přihlášení: " + e.message); 
+      }
     }
 
     async function sendMessage() {
