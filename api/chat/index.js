@@ -1,13 +1,22 @@
 module.exports = async function (context, req) {
     const authHeader = req.headers["x-custom-auth"];
-    const userMessage = req.body?.messages?.[0]?.content;
-    
+    // Přijímáme celou historii konverzace, ne jen jednu zprávu!
+    const messages = req.body?.messages || []; 
+    // Přijímáme ID agenta (Knowledge Base), výchozí je Octavia
+    const agentId = req.body?.agentId || "VWFS-POC-Agent1"; 
+
     if (!authHeader) {
         context.res = { status: 401, body: { response: "Chyba: Token se z frontendu nepřenesl." } };
         return;
     }
 
-    const url = "https://vwfs-poc.services.ai.azure.com/api/projects/vwfs-poc/agents/VWFS-POC-Agent1/endpoint/protocols/openai/responses?api-version=2025-11-15-preview";
+    if (messages.length === 0) {
+        context.res = { status: 400, body: { response: "Chyba: Prázdná konverzace." } };
+        return;
+    }
+
+    // URL se dynamicky mění podle toho, jakého agenta uživatel vybral v UI
+    const url = `https://vwfs-poc.services.ai.azure.com/api/projects/vwfs-poc/agents/${agentId}/endpoint/protocols/openai/responses?api-version=2025-11-15-preview`;
 
     try {
         const response = await fetch(url, {
@@ -16,7 +25,8 @@ module.exports = async function (context, req) {
                 "Authorization": authHeader,
                 "Content-Type": "application/json"
             },
-            body: JSON.stringify({ input: [{ role: "user", content: userMessage }] })
+            // Posíláme celou historii (pole zpráv) pro udržení kontextu
+            body: JSON.stringify({ input: messages }) 
         });
 
         const rawText = await response.text();
@@ -34,7 +44,6 @@ module.exports = async function (context, req) {
         let usageData = null;
 
         if (response.ok) {
-            // Extrakce textu
             if (data?.output && Array.isArray(data.output)) {
                 const assistantMsg = data.output.find(item => item.type === "message" && item.role === "assistant");
                 if (assistantMsg && assistantMsg.content && Array.isArray(assistantMsg.content)) {
@@ -42,7 +51,6 @@ module.exports = async function (context, req) {
                     if (textItem && textItem.text) reply = textItem.text;
                 }
 
-                // Extrakce Chain of Thought (Myšlenkové pochody)
                 const reasoningItem = data.output.find(item => item.type === "reasoning");
                 if (reasoningItem) {
                     if (reasoningItem.summary?.[0]?.text) reasoningText = reasoningItem.summary[0].text;
@@ -52,14 +60,12 @@ module.exports = async function (context, req) {
                 reply = data.choices[0].message.content;
             }
 
-            // Extrakce spotřeby tokenů
             if (data?.usage) usageData = data.usage;
 
         } else {
             reply = `Zamítnuto agentem ${response.status}: ` + JSON.stringify(data);
         }
 
-        // Posíláme na frontend rozšířený payload!
         context.res = { 
             status: 200, 
             body: { 
