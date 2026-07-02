@@ -129,7 +129,7 @@
   <div class="toast" id="toast"></div>
 
   <script>
-    // 1. MSAL KONFIGURACE (Robustní sjednocené scopes)
+    // 1. MSAL KONFIGURACE
     const msalConfig = {
       auth: {
         clientId: "41e3c8da-a8a6-4184-b7d9-9e87ad92ff83",
@@ -139,7 +139,6 @@
       cache: { cacheLocation: "sessionStorage", storeAuthStateInCookie: false }
     };
     
-    // Zásadní oprava: Používáme výhradně tento scope pro login i volání API
     const tokenRequest = { scopes: ["https://ai.azure.com/.default"] };
     
     const msalInstance = new msal.PublicClientApplication(msalConfig);
@@ -167,7 +166,7 @@
       }
     }
 
-    // 4. ROBUSTNÍ ZÍSKÁNÍ TOKENU
+    // 4. ZÍSKÁNÍ TOKENU
     async function getAccessToken() {
         if (!activeAccount) throw new Error("Uživatel není přihlášen");
         const request = { ...tokenRequest, account: activeAccount };
@@ -176,7 +175,6 @@
             return response.accessToken;
         } catch (error) {
             if (error instanceof msal.InteractionRequiredAuthError) {
-                // Fallback, pokud vypršela session
                 const response = await msalInstance.acquireTokenPopup(request);
                 return response.accessToken;
             }
@@ -193,7 +191,7 @@
       const msg = promptEl.value.trim();
       if (!msg || !activeAccount) return;
 
-      // Zablokování UI během čekání
+      // Zablokování UI
       promptEl.disabled = true;
       sendBtn.disabled = true;
       promptEl.value = "";
@@ -208,7 +206,7 @@
       `);
       chatWindow.scrollTop = chatWindow.scrollHeight;
 
-      // Vykreslení "Typing" indikátoru
+      // Vykreslení indikátoru načítání
       const typingId = "typing-" + Date.now();
       chatWindow.insertAdjacentHTML("beforeend", `
         <div class="message ai" id="${typingId}">
@@ -221,19 +219,19 @@
       try {
         const token = await getAccessToken();
 
+        // TADY JE TA ZMĚNA: Používáme X-Custom-Auth
         const res = await fetch("/api/chat", {
           method: "POST",
           headers: { 
               "Content-Type": "application/json", 
-              "Authorization": `Bearer ${token}` 
+              "X-Custom-Auth": `Bearer ${token}` 
           },
           body: JSON.stringify({ messages: [{ role: "user", content: msg }] })
         });
 
         const data = await res.json();
-        const reply = data.response || data.choices?.[0]?.message?.content || "Chyba: Backend nevrátil validní data.";
+        const reply = data.response || data.choices?.[0]?.message?.content || "Chyba: Backend nevrátil očekávaná data.";
         
-        // Odstranění typing indikátoru a vypsání odpovědi
         document.getElementById(typingId).remove();
         chatWindow.insertAdjacentHTML("beforeend", `
           <div class="message ai">
@@ -259,7 +257,7 @@
       }
     }
 
-    // 6. POMOCNÉ FUNKCE (UI a utilitky)
+    // 6. POMOCNÉ FUNKCE
     function updateUI(account) {
         activeAccount = account;
         document.getElementById("uiName").innerText = account.name;
@@ -307,7 +305,6 @@
         return div.innerHTML; 
     }
 
-    // Úvodní vykreslení
     renderWelcome();
   </script>
 </body>
