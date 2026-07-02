@@ -4,31 +4,20 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>VWFS Knowledge Hub - POC</title>
+  
   <script src="https://alcdn.msauth.net/browser/2.37.1/js/msal-browser.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 
   <style>
     :root {
-      --bg-main: #0B0F19;
-      --bg-panel: #111827;
-      --border-color: #1F2937;
-      --text-main: #F3F4F6;
-      --text-muted: #9CA3AF;
-      --accent-blue: #2563EB;
-      --accent-hover: #1D4ED8;
-      --ai-bubble: #1F2937;
-      --user-bubble: #2563EB;
+      --bg-main: #0B0F19; --bg-panel: #111827; --border-color: #1F2937;
+      --text-main: #F3F4F6; --text-muted: #9CA3AF; --accent-blue: #2563EB;
+      --accent-hover: #1D4ED8; --ai-bubble: #1F2937; --user-bubble: #2563EB;
       font-family: 'Segoe UI', Inter, Roboto, Helvetica, Arial, sans-serif;
     }
     
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    
-    body { 
-      background-color: var(--bg-main); 
-      color: var(--text-main); 
-      height: 100vh; 
-      overflow: hidden; 
-      display: flex;
-    }
+    body { background-color: var(--bg-main); color: var(--text-main); height: 100vh; overflow: hidden; display: flex; }
 
     /* SCROLLBAR */
     ::-webkit-scrollbar { width: 8px; }
@@ -38,29 +27,9 @@
 
     /* LAYOUT */
     .app-container { display: flex; width: 100%; height: 100%; }
-    
-    .sidebar { 
-      width: 280px; 
-      background-color: var(--bg-panel); 
-      border-right: 1px solid var(--border-color); 
-      display: flex; 
-      flex-direction: column; 
-      padding: 20px; 
-    }
-    
-    .main-chat { 
-      flex: 1; 
-      display: flex; 
-      flex-direction: column; 
-      position: relative;
-    }
-    
-    .right-panel { 
-      width: 300px; 
-      background-color: var(--bg-panel); 
-      border-left: 1px solid var(--border-color); 
-      padding: 20px; 
-    }
+    .sidebar { width: 280px; background-color: var(--bg-panel); border-right: 1px solid var(--border-color); display: flex; flex-direction: column; padding: 20px; z-index: 20; }
+    .main-chat { flex: 1; display: flex; flex-direction: column; position: relative; }
+    .right-panel { width: 300px; background-color: var(--bg-panel); border-left: 1px solid var(--border-color); padding: 20px; z-index: 20; }
 
     /* SIDEBAR ELEMENTS */
     .brand { display: flex; align-items: center; gap: 12px; margin-bottom: 30px; }
@@ -69,7 +38,7 @@
     .brand span { font-size: 12px; color: var(--text-muted); }
 
     .user-profile { background: rgba(255,255,255,0.05); padding: 12px; border-radius: 12px; display: flex; align-items: center; gap: 12px; margin-bottom: 20px; border: 1px solid var(--border-color); }
-    .avatar { width: 36px; height: 36px; border-radius: 50%; background: #374151; display: flex; justify-content: center; align-items: center; font-weight: 600; font-size: 14px; }
+    .avatar { width: 36px; height: 36px; border-radius: 50%; background: #374151; display: flex; justify-content: center; align-items: center; font-weight: 600; font-size: 14px; flex-shrink:0; }
     .user-profile strong { font-size: 14px; font-weight: 500; }
 
     .btn-primary { width: 100%; background: var(--accent-blue); color: white; border: none; padding: 12px; border-radius: 10px; font-weight: 600; cursor: pointer; transition: 0.2s; display: flex; justify-content: center; align-items: center; gap: 8px; }
@@ -85,85 +54,93 @@
     .chat-header { height: 70px; border-bottom: 1px solid var(--border-color); display: flex; align-items: center; padding: 0 30px; background: rgba(11, 15, 25, 0.9); backdrop-filter: blur(10px); z-index: 10; }
     .chat-header h2 { font-size: 16px; font-weight: 500; }
 
-    /* CHAT MESSAGES AREA */
+    /* CHAT MESSAGES */
     .chat-messages { flex: 1; overflow-y: auto; padding: 30px; display: flex; flex-direction: column; gap: 24px; scroll-behavior: smooth; }
-    
     .message-row { display: flex; width: 100%; animation: fadeIn 0.3s ease; }
     .message-row.ai { justify-content: flex-start; }
     .message-row.user { justify-content: flex-end; }
-
-    .message-content { display: flex; gap: 16px; max-width: 80%; }
+    .message-content { display: flex; gap: 16px; max-width: 85%; }
     .message-row.user .message-content { flex-direction: row-reverse; }
 
-    .bubble { padding: 14px 18px; border-radius: 16px; font-size: 15px; line-height: 1.6; word-wrap: break-word; }
-    
+    .bubble-wrapper { display: flex; flex-direction: column; gap: 8px; width: 100%; }
+    .bubble { padding: 16px 20px; border-radius: 16px; font-size: 15px; line-height: 1.6; word-wrap: break-word; overflow-x: auto; }
     .message-row.ai .bubble { background: var(--ai-bubble); border: 1px solid #374151; color: #F9FAFB; border-top-left-radius: 4px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
     .message-row.user .bubble { background: var(--user-bubble); color: #FFFFFF; border-top-right-radius: 4px; box-shadow: 0 4px 15px rgba(37, 99, 235, 0.2); }
-    
-    .message-row.ai .avatar { background: #374151; color: white; flex-shrink: 0; }
-    .message-row.user .avatar { background: var(--accent-blue); color: white; flex-shrink: 0; }
 
-    .bubble pre { background: #111827; padding: 10px; border-radius: 8px; overflow-x: auto; margin-top: 10px; font-family: monospace; font-size: 13px; }
+    /* MARKDOWN STYLES (ENTERPRISE GRADE) */
+    .markdown-body p { margin-bottom: 12px; }
+    .markdown-body p:last-child { margin-bottom: 0; }
+    .markdown-body table { width: 100%; border-collapse: collapse; margin: 15px 0; font-size: 14px; background: rgba(0,0,0,0.2); border-radius: 8px; overflow: hidden; }
+    .markdown-body th, .markdown-body td { border: 1px solid #374151; padding: 10px 14px; text-align: left; }
+    .markdown-body th { background: rgba(37, 99, 235, 0.15); font-weight: 600; color: #60A5FA; }
+    .markdown-body code { background: #111827; padding: 3px 6px; border-radius: 4px; font-family: monospace; font-size: 13px; color: #93C5FD; border: 1px solid #374151; }
+    .markdown-body pre { background: #0B0F19; padding: 16px; border-radius: 8px; overflow-x: auto; border: 1px solid #374151; margin: 15px 0; }
+    .markdown-body pre code { background: transparent; border: none; padding: 0; color: #E5E7EB; }
+    .markdown-body ul, .markdown-body ol { margin-left: 20px; margin-bottom: 12px; }
+
+    /* CITATIONS & SOURCES */
+    .cite-badge { display: inline-flex; justify-content: center; align-items: center; background: rgba(37,99,235,0.2); color: #60A5FA; border: 1px solid #2563EB; border-radius: 4px; font-size: 11px; padding: 0 4px; margin: 0 3px; cursor: pointer; font-weight: 600; vertical-align: super; transition: 0.2s; }
+    .cite-badge:hover { background: #2563EB; color: white; }
     
+    .sources-list { margin-top: 12px; padding-top: 12px; border-top: 1px dashed #374151; font-size: 13px; color: var(--text-muted); }
+    .sources-list strong { color: #D1D5DB; display: block; margin-bottom: 6px; }
+    .sources-list ul { list-style: none; margin: 0; padding: 0; }
+    .sources-list li { margin-bottom: 4px; display: flex; align-items: flex-start; gap: 6px; }
+    
+    /* REASONING & TELEMETRY */
+    .reasoning-block { margin-bottom: 12px; background: rgba(0,0,0,0.2); border: 1px solid #374151; border-radius: 8px; font-size: 13px; overflow: hidden; }
+    .reasoning-block summary { padding: 10px 14px; cursor: pointer; color: var(--text-muted); font-weight: 500; outline: none; }
+    .reasoning-block summary:hover { background: rgba(255,255,255,0.02); }
+    .reasoning-content { padding: 10px 14px; border-top: 1px solid #374151; color: #9CA3AF; font-style: italic; }
+
+    .telemetry-bar { display: flex; justify-content: space-between; align-items: center; margin-top: 6px; font-size: 12px; color: #6B7280; padding: 0 4px; }
+    .telemetry-stats { display: flex; gap: 15px; }
+    .action-icons { display: flex; gap: 10px; }
+    .action-icons button { background: transparent; border: none; color: #6B7280; cursor: pointer; transition: 0.2s; display: flex; align-items: center; gap: 4px; font-size: 12px; }
+    .action-icons button:hover { color: #E5E7EB; }
+
     /* COMPOSER */
-    .composer-area { padding: 20px 30px 30px 30px; background: var(--bg-main); border-top: 1px solid var(--border-color); }
+    .composer-area { padding: 20px 30px 30px 30px; background: var(--bg-main); border-top: 1px solid var(--border-color); z-index: 10; }
     .input-box { display: flex; gap: 12px; background: var(--bg-panel); border: 1px solid #374151; padding: 10px 10px 10px 20px; border-radius: 24px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); transition: 0.2s; }
     .input-box:focus-within { border-color: var(--accent-blue); }
-    
     textarea { flex: 1; background: transparent; border: none; color: white; font-family: inherit; font-size: 15px; resize: none; outline: none; padding: 10px 0; height: 44px; line-height: 24px; }
-    textarea::placeholder { color: #6B7280; }
     textarea:disabled { opacity: 0.5; cursor: not-allowed; }
-    
     .send-btn { width: 44px; height: 44px; border-radius: 50%; background: var(--accent-blue); color: white; border: none; font-size: 18px; cursor: pointer; display: flex; justify-content: center; align-items: center; transition: 0.2s; flex-shrink: 0; }
     .send-btn:hover:not(:disabled) { background: var(--accent-hover); transform: scale(1.05); }
-    .send-btn:disabled { background: #374151; color: #9CA3AF; cursor: not-allowed; transform: none; }
+    .send-btn:disabled { background: #374151; color: #9CA3AF; cursor: not-allowed; }
 
-    /* RIGHT PANEL */
+    /* RIGHT PANEL DOCS */
     .right-panel h3 { font-size: 14px; font-weight: 600; margin-bottom: 16px; color: var(--text-main); }
-    .doc-card { background: rgba(255,255,255,0.03); border: 1px solid var(--border-color); padding: 14px; border-radius: 12px; transition: 0.2s; }
+    .doc-card { background: rgba(255,255,255,0.03); border: 1px solid var(--border-color); padding: 14px; border-radius: 12px; transition: 0.2s; margin-bottom: 10px; }
     .doc-card:hover { border-color: #4B5563; }
-    .doc-card strong { display: block; font-size: 14px; color: var(--accent-blue); margin-bottom: 4px; }
+    .doc-card strong { display: block; font-size: 14px; color: var(--accent-blue); margin-bottom: 4px; word-break: break-all; }
     .doc-card small { font-size: 12px; color: var(--text-muted); }
 
-    /* TYPING INDICATOR */
-    .typing { display: flex; gap: 5px; padding: 5px 0; }
-    .typing span { width: 6px; height: 6px; background: #9CA3AF; border-radius: 50%; animation: blink 1.4s infinite both; }
-    .typing span:nth-child(2) { animation-delay: 0.2s; }
-    .typing span:nth-child(3) { animation-delay: 0.4s; }
-
+    /* LOADING STATUS */
+    .status-container { display: flex; align-items: center; gap: 12px; color: #60A5FA; font-size: 14px; font-style: italic; }
+    .spinner { width: 16px; height: 16px; border: 2px solid rgba(96, 165, 250, 0.3); border-radius: 50%; border-top-color: #60A5FA; animation: spin 1s ease-in-out infinite; }
+    
     @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-    @keyframes blink { 0%, 80%, 100% { opacity: 0.3; transform: scale(0.8); } 40% { opacity: 1; transform: scale(1.2); } }
+    @keyframes spin { to { transform: rotate(360deg); } }
   </style>
 </head>
 
 <body>
   <div class="app-container">
+    
     <aside class="sidebar">
-      <div class="brand">
-        <div class="logo">VW</div>
-        <div>
-          <h1>Knowledge Hub</h1>
-          <span>VWFS AI Assistant</span>
-        </div>
-      </div>
-      
+      <div class="brand"><div class="logo">VW</div><div><h1>Knowledge Hub</h1><span>VWFS AI Assistant</span></div></div>
       <div class="user-profile">
-        <div class="avatar" id="uiAv">?</div>
-        <strong id="uiName">Nepřihlášen</strong>
+        <div class="avatar" id="uiAv">?</div><strong id="uiName">Nepřihlášen</strong>
       </div>
-      
       <button class="btn-primary" id="loginBtn" onclick="loginUser()">Přihlásit se (SSO)</button>
       <button class="btn-secondary" onclick="clearChat()" id="clearBtn" style="display:none;">Vyčistit konverzaci</button>
-      
       <div class="section-title">Aktivní POC</div>
       <button class="chat-item">Škoda Octavia (POC)</button>
     </aside>
 
     <main class="main-chat">
-      <div class="chat-header">
-        <h2>Škoda Octavia - IT POC Analýza</h2>
-      </div>
-      
+      <div class="chat-header"><h2>Škoda Octavia - IT POC Analýza</h2></div>
       <div class="chat-messages" id="chatWindow"></div>
       
       <div class="composer-area">
@@ -182,10 +159,19 @@
         <strong>Octavia_IV.pdf</strong>
         <small>Business Analysis & Technical Specs</small>
       </div>
+      <div class="doc-card">
+        <strong>Ceník_Servis.pdf</strong>
+        <small>Financial Data & Margins</small>
+      </div>
     </aside>
+
   </div>
 
   <script>
+    // Konfigurace Marked.js
+    marked.setOptions({ breaks: true, gfm: true });
+
+    // MSAL CONFIG
     const msalConfig = {
       auth: {
         clientId: "41e3c8da-a8a6-4184-b7d9-9e87ad92ff83",
@@ -224,33 +210,143 @@
         }
     }
 
-    function appendMessage(role, text, id = null) {
+    // Helper: Kopírování textu
+    function copyText(button, textToCopy) {
+      navigator.clipboard.writeText(textToCopy);
+      const originalHtml = button.innerHTML;
+      button.innerHTML = "✅ Zkopírováno";
+      setTimeout(() => button.innerHTML = originalHtml, 2000);
+    }
+
+    // Vykreslení uživatelské zprávy
+    function appendUserMessage(text) {
         const chatWindow = document.getElementById("chatWindow");
-        const isUser = role === 'user';
-        const avatar = isUser ? activeAccount.name.substring(0,2).toUpperCase() : "AI";
+        const avatar = activeAccount.name.substring(0,2).toUpperCase();
+        const safeText = text.replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\n/g, "<br>");
         
-        // OPRAVA JS PÁDU: Vždy vynutíme string, aby nevyhodil TypeError
-        const safeText = String(text);
-
-        let contentHtml = safeText;
-        if (safeText === "TYPING") {
-            contentHtml = `<div class="typing"><span></span><span></span><span></span></div>`;
-        } else {
-            // Bezpečné formátování textu
-            contentHtml = safeText.replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\n/g, "<br>");
-        }
-
-        const msgHtml = `
-          <div class="message-row ${isUser ? 'user' : 'ai'}" ${id ? `id="${id}"` : ''}>
+        chatWindow.insertAdjacentHTML("beforeend", `
+          <div class="message-row user">
             <div class="message-content">
               <div class="avatar">${avatar}</div>
-              <div class="bubble">${contentHtml}</div>
+              <div class="bubble-wrapper">
+                <div class="bubble">${safeText}</div>
+              </div>
+            </div>
+          </div>
+        `);
+        chatWindow.scrollTop = chatWindow.scrollHeight;
+    }
+
+    // Zpracování odpovědi AI (Citace, Markdown, Telemetrie)
+    function appendAIMessage(text, reasoning = "", usage = null, timeTaken = "0.0") {
+        const chatWindow = document.getElementById("chatWindow");
+        const safeText = String(text);
+        
+        // 1. Zpracování Citací 【message_idx:search_idx†source_name】
+        let citationsList = [];
+        let parsedText = safeText.replace(/【(?:[^:†]+:)?(?:[^†]+†)?([^】]+)】/g, (match, sourceName) => {
+            let cleanSource = sourceName.trim();
+            let idx = citationsList.indexOf(cleanSource);
+            if (idx === -1) {
+                citationsList.push(cleanSource);
+                idx = citationsList.length - 1;
+            }
+            return `<span class="cite-badge" title="${cleanSource}">[${idx + 1}]</span>`;
+        });
+
+        // 2. Aplikace Markdownu
+        let htmlContent = `<div class="markdown-body">${marked.parse(parsedText)}</div>`;
+
+        // 3. Přidání seznamu zdrojů nakonec bubliny
+        if (citationsList.length > 0) {
+            htmlContent += `<div class="sources-list"><strong>Použité zdroje:</strong><ul>`;
+            citationsList.forEach((src, i) => {
+                htmlContent += `<li><span class="cite-badge">[${i+1}]</span> ${src}</li>`;
+            });
+            htmlContent += `</ul></div>`;
+        }
+
+        // 4. Přidání Chain of Thought (Reasoning)
+        let reasoningHtml = "";
+        if (reasoning && reasoning.trim().length > 0) {
+            reasoningHtml = `
+              <details class="reasoning-block">
+                <summary>💡 Zobrazit myšlenkové pochody agenta</summary>
+                <div class="reasoning-content">${reasoning.replace(/\n/g, '<br>')}</div>
+              </details>
+            `;
+        }
+
+        // 5. Telemetrie
+        let telemetryHtml = "";
+        if (usage) {
+            telemetryHtml = `
+              <div class="telemetry-bar">
+                <div class="telemetry-stats">
+                  <span>⏱ ${timeTaken}s</span>
+                  <span>🪙 Tokeny: ${usage.input_tokens} in / ${usage.output_tokens} out</span>
+                </div>
+                <div class="action-icons">
+                  <button onclick='copyText(this, ${JSON.stringify(safeText)})'>📋 Kopírovat</button>
+                  <button>👍</button>
+                  <button>👎</button>
+                </div>
+              </div>
+            `;
+        }
+
+        // Sestavení a vykreslení zprávy
+        const msgHtml = `
+          <div class="message-row ai">
+            <div class="message-content">
+              <div class="avatar">AI</div>
+              <div class="bubble-wrapper">
+                ${reasoningHtml}
+                <div class="bubble">${htmlContent}</div>
+                ${telemetryHtml}
+              </div>
             </div>
           </div>
         `;
         
         chatWindow.insertAdjacentHTML("beforeend", msgHtml);
         chatWindow.scrollTop = chatWindow.scrollHeight;
+    }
+
+    // Vykreslení "Načítám..."
+    function showLoading() {
+        const id = "loading-" + Date.now();
+        document.getElementById("chatWindow").insertAdjacentHTML("beforeend", `
+          <div class="message-row ai" id="${id}">
+            <div class="message-content">
+              <div class="avatar">AI</div>
+              <div class="bubble-wrapper">
+                <div class="bubble" style="background: transparent; border: none; padding: 0;">
+                  <div class="status-container">
+                    <div class="spinner"></div>
+                    <span id="${id}-text">Ověřování identity (Entra ID)...</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        `);
+        
+        const statusTexts = ["Hledání v indexovaných znalostních bázích...", "Aplikace byznysové logiky...", "Syntéza dat a generování odpovědi..."];
+        let step = 0;
+        const textEl = document.getElementById(`${id}-text`);
+        
+        const interval = setInterval(() => {
+            if (step < statusTexts.length && document.getElementById(id)) {
+                textEl.innerText = statusTexts[step];
+                step++;
+            } else {
+                clearInterval(interval);
+            }
+        }, 1200);
+
+        document.getElementById("chatWindow").scrollTop = document.getElementById("chatWindow").scrollHeight;
+        return id;
     }
 
     async function sendMessage() {
@@ -264,32 +360,38 @@
       sendBtn.disabled = true;
       promptEl.value = "";
 
-      appendMessage("user", msg);
+      appendUserMessage(msg);
+      const loadingId = showLoading();
       
-      const typingId = "typing-" + Date.now();
-      appendMessage("ai", "TYPING", typingId);
+      const startTime = performance.now();
 
       try {
         const token = await getAccessToken();
 
         const res = await fetch("/api/chat", {
           method: "POST",
-          headers: { 
-              "Content-Type": "application/json", 
-              "X-Custom-Auth": `Bearer ${token}` 
-          },
+          headers: { "Content-Type": "application/json", "X-Custom-Auth": `Bearer ${token}` },
           body: JSON.stringify({ messages: [{ role: "user", content: msg }] })
         });
 
         const data = await res.json();
-        const reply = data.response || "Odpověď se nepodařilo dekódovat z backendu.";
         
-        document.getElementById(typingId).remove();
-        appendMessage("ai", reply);
+        const endTime = performance.now();
+        const timeTaken = ((endTime - startTime) / 1000).toFixed(1);
+
+        document.getElementById(loadingId).remove();
+        
+        // Predpokládáme, že nový backend vrátí { response, reasoning, usage }
+        if(data.response) {
+             appendAIMessage(data.response, data.reasoning, data.usage, timeTaken);
+        } else {
+             // Fallback pro jistotu
+             appendAIMessage(JSON.stringify(data));
+        }
 
       } catch (error) {
-        document.getElementById(typingId).remove();
-        appendMessage("ai", `Kritická chyba: ${error.message}`);
+        document.getElementById(loadingId)?.remove();
+        appendAIMessage(`**Kritická chyba systému:** ${error.message}`);
       } finally {
         promptEl.disabled = false;
         sendBtn.disabled = false;
@@ -301,13 +403,12 @@
         activeAccount = account;
         document.getElementById("uiName").innerText = account.name;
         document.getElementById("uiAv").innerText = account.name.substring(0,2).toUpperCase();
-        
         document.getElementById("loginBtn").style.display = "none";
         document.getElementById("clearBtn").style.display = "block";
         
         const promptEl = document.getElementById("prompt");
         promptEl.disabled = false;
-        promptEl.placeholder = "Zadejte dotaz pro AI analytika...";
+        promptEl.placeholder = "Napište dotaz (např. 'Vygeneruj BDD scénáře pro brzdy')...";
         document.getElementById("sendBtn").disabled = false;
     }
 
@@ -320,11 +421,10 @@
 
     function renderWelcome() { 
         document.getElementById("chatWindow").innerHTML = "";
-        appendMessage("ai", "Vítejte v analytickém rozhraní pro projekt Škoda Octavia. Prosím, přihlaste se v levém panelu pomocí SSO pro odemčení přístupu k firemním datům.");
+        appendAIMessage("**Vítejte v analytickém rozhraní pro projekt Škoda Octavia.**\n\nJsem plně integrovaný RAG asistent s přístupem k firemní dokumentaci a ceníkům.\n\n*Prosím, přihlaste se v levém panelu pro odemčení API.*");
     }
 
     function clearChat() { renderWelcome(); }
-
     renderWelcome();
   </script>
 </body>
