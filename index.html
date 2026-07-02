@@ -138,7 +138,6 @@
 
 <body>
   <div class="app-container">
-    
     <aside class="sidebar">
       <div class="brand">
         <div class="logo">VW</div>
@@ -165,8 +164,7 @@
         <h2>Škoda Octavia - IT POC Analýza</h2>
       </div>
       
-      <div class="chat-messages" id="chatWindow">
-        </div>
+      <div class="chat-messages" id="chatWindow"></div>
       
       <div class="composer-area">
         <div class="input-box">
@@ -185,11 +183,9 @@
         <small>Business Analysis & Technical Specs</small>
       </div>
     </aside>
-
   </div>
 
   <script>
-    // MSAL CONFIG
     const msalConfig = {
       auth: {
         clientId: "41e3c8da-a8a6-4184-b7d9-9e87ad92ff83",
@@ -233,12 +229,15 @@
         const isUser = role === 'user';
         const avatar = isUser ? activeAccount.name.substring(0,2).toUpperCase() : "AI";
         
-        let contentHtml = text;
-        if (text === "TYPING") {
+        // OPRAVA JS PÁDU: Vždy vynutíme string, aby nevyhodil TypeError
+        const safeText = String(text);
+
+        let contentHtml = safeText;
+        if (safeText === "TYPING") {
             contentHtml = `<div class="typing"><span></span><span></span><span></span></div>`;
         } else {
-            // Jednoduchý převod Markdown odřádkování na HTML
-            contentHtml = text.replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\n/g, "<br>");
+            // Bezpečné formátování textu
+            contentHtml = safeText.replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\n/g, "<br>");
         }
 
         const msgHtml = `
@@ -321,7 +320,7 @@
 
     function renderWelcome() { 
         document.getElementById("chatWindow").innerHTML = "";
-        appendMessage("ai", "Vítejte v analytickém rozhraní pro projekt Škoda Octavia. Prosím, přihlaste se v levém panelu pomocí SSO pro odemčení přístupu k firemním datům a dokumentům.");
+        appendMessage("ai", "Vítejte v analytickém rozhraní pro projekt Škoda Octavia. Prosím, přihlaste se v levém panelu pomocí SSO pro odemčení přístupu k firemním datům.");
     }
 
     function clearChat() { renderWelcome(); }
