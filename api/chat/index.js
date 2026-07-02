@@ -30,32 +30,43 @@ module.exports = async function (context, req) {
         }
         
         let reply = "AI nevygenerovalo žádný text.";
+        let reasoningText = "";
+        let usageData = null;
 
         if (response.ok) {
-            // Přesná extrakce na základě tvého reálného JSON payloadu
+            // Extrakce textu
             if (data?.output && Array.isArray(data.output)) {
-                // 1. Najdeme objekt, který je typu "message" a role "assistant"
                 const assistantMsg = data.output.find(item => item.type === "message" && item.role === "assistant");
-                
                 if (assistantMsg && assistantMsg.content && Array.isArray(assistantMsg.content)) {
-                    // 2. Uvnitř najdeme samotný text
                     const textItem = assistantMsg.content.find(c => c.type === "output_text" || c.text);
-                    if (textItem && textItem.text) {
-                        reply = textItem.text;
-                    }
+                    if (textItem && textItem.text) reply = textItem.text;
                 }
-            } 
-            // Fallback pro jistotu
-            if (reply === "AI nevygenerovalo žádný text." && data?.choices?.[0]?.message?.content) {
+
+                // Extrakce Chain of Thought (Myšlenkové pochody)
+                const reasoningItem = data.output.find(item => item.type === "reasoning");
+                if (reasoningItem) {
+                    if (reasoningItem.summary?.[0]?.text) reasoningText = reasoningItem.summary[0].text;
+                    else if (reasoningItem.content?.[0]?.text) reasoningText = reasoningItem.content[0].text;
+                }
+            } else if (data?.choices?.[0]?.message?.content) {
                 reply = data.choices[0].message.content;
             }
+
+            // Extrakce spotřeby tokenů
+            if (data?.usage) usageData = data.usage;
+
         } else {
             reply = `Zamítnuto agentem ${response.status}: ` + JSON.stringify(data);
         }
 
+        // Posíláme na frontend rozšířený payload!
         context.res = { 
             status: 200, 
-            body: { response: String(reply) } 
+            body: { 
+                response: String(reply),
+                reasoning: reasoningText,
+                usage: usageData
+            } 
         };
     } catch (error) {
         context.res = { status: 500, body: { response: "Kritická chyba backendu: " + error.message } };
