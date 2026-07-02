@@ -18,6 +18,7 @@
     * { box-sizing: border-box; }
     body { margin: 0; background: radial-gradient(circle at top left, rgba(59, 130, 246, .17), transparent 35%), var(--bg); color: var(--text); height: 100vh; overflow: hidden; }
     .app { display: grid; grid-template-columns: 310px 1fr 340px; height: 100vh; }
+    
     /* SIDEBAR */
     .sidebar { background: rgba(9, 14, 31, .95); border-right: 1px solid var(--border); padding: 18px; display: flex; flex-direction: column; gap: 16px; }
     .brand { display: flex; align-items: center; gap: 12px; padding-bottom: 14px; border-bottom: 1px solid var(--border); }
@@ -25,116 +26,288 @@
     .user-card { background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px; }
     .user-top { display: flex; align-items: center; gap: 12px; }
     .avatar { width: 38px; height: 38px; border-radius: 50%; background: #22305c; display: grid; place-items: center; font-weight: 700; }
-    .new-chat { border: 0; background: linear-gradient(135deg, var(--accent), #1d4ed8); color: white; padding: 13px 16px; border-radius: 14px; font-weight: 700; cursor: pointer; }
+    .new-chat { border: 0; background: linear-gradient(135deg, var(--accent), #1d4ed8); color: white; padding: 13px 16px; border-radius: 14px; font-weight: 700; cursor: pointer; transition: .2s; }
+    .new-chat:hover { filter: brightness(1.1); }
+    .new-chat:disabled { background: var(--locked); cursor: not-allowed; }
     .section-title { font-size: 11px; color: var(--muted); text-transform: uppercase; margin: 8px 2px; }
     .chat-list { display: flex; flex-direction: column; gap: 8px; }
     .chat-item { background: transparent; border: 1px solid transparent; color: var(--text); padding: 12px; border-radius: 14px; cursor: pointer; text-align: left; transition: .15s; }
     .chat-item.active { background: var(--panel-2); border-color: var(--accent); }
-    .chat-item.locked { opacity: 0.6; cursor: not-allowed; }
+    
+    /* MAIN CHAT AREA */
     .main { display: flex; flex-direction: column; min-width: 0; }
     .topbar { height: 72px; border-bottom: 1px solid var(--border); background: rgba(9, 14, 31, .75); display: flex; align-items: center; justify-content: space-between; padding: 0 24px; }
-    .chat-window { flex: 1; overflow: auto; padding: 28px; }
-    .message { display: grid; grid-template-columns: 42px 1fr; gap: 14px; margin-bottom: 24px; max-width: 980px; }
-    .message.user { margin-left: auto; }
+    .chat-window { flex: 1; overflow-y: auto; padding: 28px; display: flex; flex-direction: column; scroll-behavior: smooth; }
+    .message { display: grid; grid-template-columns: 42px 1fr; gap: 14px; margin-bottom: 24px; max-width: 980px; width: 100%; }
+    .message.user { margin-left: auto; grid-template-columns: 1fr 42px; direction: rtl; }
+    .message.user > * { direction: ltr; }
+    .message.user .avatar { background: #3b82f6; }
     .message.user .bubble { background: linear-gradient(135deg, #1e3a8a, #1d4ed8); border-color: #3157c7; }
     .message.ai .avatar { background: linear-gradient(135deg, #334155, #172033); }
-    .bubble { background: rgba(13, 19, 40, .95); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px 18px; }
-    .loading-pulse { animation: pulse 1.5s infinite; color: var(--accent-2); font-style: italic; }
-    @keyframes pulse { 0% {opacity: 0.5;} 50% {opacity: 1;} 100% {opacity: 0.5;} }
+    .bubble { background: rgba(13, 19, 40, .95); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px 18px; line-height: 1.5; }
+    .bubble p { margin: 0 0 10px 0; }
+    .bubble p:last-child { margin: 0; }
+    
+    /* RIGHT PANEL */
+    .right-panel { background: rgba(9, 14, 31, .95); border-left: 1px solid var(--border); padding: 18px; }
+    .panel-card { background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; }
+    .panel-card h3 { margin: 0 0 12px 0; font-size: 14px; color: var(--accent-2); }
+    .doc { padding: 10px; background: var(--panel-2); border-radius: 8px; margin-bottom: 8px; border: 1px solid var(--border); }
+    .doc strong { display: block; font-size: 13px; }
+    .doc small { color: var(--muted); font-size: 11px; }
+
+    /* COMPOSER */
     .composer { border-top: 1px solid var(--border); padding: 18px 24px; background: rgba(9, 14, 31, .9); }
     .composer-box { display: grid; grid-template-columns: 1fr auto; gap: 12px; max-width: 1050px; margin: 0 auto; }
-    textarea { resize: none; height: 58px; border-radius: 16px; border: 1px solid var(--border); background: var(--panel); color: var(--text); padding: 15px 16px; width: 100%; outline: none; }
-    .send { width: 58px; border: 0; border-radius: 16px; background: var(--accent); color: white; cursor: pointer; }
-    .toast { position: fixed; bottom: 22px; right: 22px; background: #111827; color: white; border: 1px solid var(--border); padding: 13px 16px; border-radius: 14px; opacity: 0; transition: .18s; z-index: 1000; }
+    textarea { resize: none; height: 58px; border-radius: 16px; border: 1px solid var(--border); background: var(--panel); color: var(--text); padding: 15px 16px; width: 100%; outline: none; font-family: inherit; font-size: 14px; }
+    textarea:disabled { opacity: 0.5; cursor: not-allowed; }
+    .send { width: 58px; border: 0; border-radius: 16px; background: var(--accent); color: white; cursor: pointer; font-size: 18px; transition: .2s; }
+    .send:hover { background: var(--accent-2); }
+    .send:disabled { background: var(--locked); cursor: not-allowed; }
+    
+    /* TOAST & ANIMATIONS */
+    .toast { position: fixed; bottom: 22px; right: 22px; background: #111827; color: white; border: 1px solid var(--border); padding: 13px 16px; border-radius: 14px; opacity: 0; transition: .18s; z-index: 1000; pointer-events: none; }
     .toast.show { opacity: 1; }
+    .typing-indicator { display: inline-flex; gap: 4px; padding: 4px 8px; }
+    .typing-indicator span { width: 6px; height: 6px; background: var(--accent-2); border-radius: 50%; animation: bounce 1.4s infinite ease-in-out both; }
+    .typing-indicator span:nth-child(1) { animation-delay: -0.32s; }
+    .typing-indicator span:nth-child(2) { animation-delay: -0.16s; }
+    @keyframes bounce { 0%, 80%, 100% { transform: scale(0); } 40% { transform: scale(1); } }
   </style>
 </head>
 
 <body>
   <div class="app">
     <aside class="sidebar">
-      <div class="brand"><div class="logo">VW</div><div><h1>Knowledge Hub</h1><span>VWFS AI Assistant</span></div></div>
+      <div class="brand">
+        <div class="logo">VW</div>
+        <div><h1 style="margin:0; font-size:18px;">Knowledge Hub</h1><span style="font-size:11px; color:var(--muted);">VWFS AI Assistant</span></div>
+      </div>
       <div class="user-card">
-        <div class="user-top"><div class="avatar" id="uiAv">?</div><div><strong id="uiName">Nepřihlášen</strong></div></div>
+        <div class="user-top">
+          <div class="avatar" id="uiAv">?</div>
+          <div><strong id="uiName">Nepřihlášen</strong></div>
+        </div>
       </div>
       <button class="new-chat" id="loginBtn" onclick="loginUser()">+ Přihlásit se (SSO)</button>
-      <button class="new-chat" onclick="clearChat()" id="clearBtn" style="display:none;">+ Vyčistit chat</button>
-      <div><div class="section-title">Aktivní POC</div><div class="chat-list"><button class="chat-item active"><div class="chat-item-title"><span>Škoda Octavia (POC)</span></div></button></div></div>
+      <button class="new-chat" onclick="clearChat()" id="clearBtn" style="display:none; background: transparent; border: 1px solid var(--border); color: var(--text);">Vyčistit chat</button>
+      
+      <div>
+        <div class="section-title">Aktivní POC</div>
+        <div class="chat-list">
+          <button class="chat-item active">
+            <div class="chat-item-title"><span>Škoda Octavia (POC)</span></div>
+          </button>
+        </div>
+      </div>
     </aside>
 
     <main class="main">
-      <header class="topbar"><h2>Škoda Octavia - IT POC Analýza</h2></header>
+      <header class="topbar">
+        <h2 style="margin:0; font-size:16px;">Škoda Octavia - IT POC Analýza</h2>
+      </header>
       <section class="chat-window" id="chatWindow"></section>
       <footer class="composer">
-        <div class="composer-box"><textarea id="prompt" placeholder="Nejprve se přihlas..."></textarea><button class="send" onclick="sendMessage()">➜</button></div>
+        <div class="composer-box">
+          <textarea id="prompt" placeholder="Nejprve se přihlas..." disabled onkeydown="handleEnter(event)"></textarea>
+          <button class="send" id="sendBtn" onclick="sendMessage()" disabled>➜</button>
+        </div>
       </footer>
     </main>
 
     <aside class="right-panel">
-      <div class="panel-card"><h3>Indexované zdroje</h3><div class="doc"><div><strong>Octavia_IV.pdf</strong><small>business analysis</small></div></div></div>
+      <div class="panel-card">
+        <h3>Indexované zdroje</h3>
+        <div class="doc">
+          <strong>Octavia_IV.pdf</strong>
+          <small>Business Analysis</small>
+        </div>
+      </div>
     </aside>
   </div>
+  
   <div class="toast" id="toast"></div>
 
   <script>
-    const msalInstance = new msal.PublicClientApplication({
+    // 1. MSAL KONFIGURACE (Robustní sjednocené scopes)
+    const msalConfig = {
       auth: {
         clientId: "41e3c8da-a8a6-4184-b7d9-9e87ad92ff83",
         authority: "https://login.microsoftonline.com/8659bccf-b2fe-4d28-b5be-04910dc7d193",
         redirectUri: window.location.origin
-      }
-    });
-
+      },
+      cache: { cacheLocation: "sessionStorage", storeAuthStateInCookie: false }
+    };
+    
+    // Zásadní oprava: Používáme výhradně tento scope pro login i volání API
+    const tokenRequest = { scopes: ["https://ai.azure.com/.default"] };
+    
+    const msalInstance = new msal.PublicClientApplication(msalConfig);
     let activeAccount = null;
 
+    // 2. INICIALIZACE APLIKACE
     msalInstance.initialize().then(() => {
         const accounts = msalInstance.getAllAccounts();
-        if (accounts.length > 0) updateUI(accounts[0]);
+        if (accounts.length > 0) {
+            updateUI(accounts[0]);
+        }
+    }).catch(err => {
+        console.error("MSAL Init Error:", err);
     });
 
+    // 3. PŘIHLÁŠENÍ (LOGIN)
     async function loginUser() {
       try {
-        const res = await msalInstance.loginPopup({ scopes: ["https://vwfs-poc.services.ai.azure.com/.default"] });
+        const res = await msalInstance.loginPopup(tokenRequest);
         updateUI(res.account);
-        toast("Přihlášeno!");
-      } catch (e) { toast("Chyba: " + e.message); }
+        toast("Úspěšně přihlášeno!");
+      } catch (e) { 
+        console.error("Login Error:", e);
+        toast("Chyba přihlášení. Zkontroluj konzoli."); 
+      }
     }
 
+    // 4. ROBUSTNÍ ZÍSKÁNÍ TOKENU
+    async function getAccessToken() {
+        if (!activeAccount) throw new Error("Uživatel není přihlášen");
+        const request = { ...tokenRequest, account: activeAccount };
+        try {
+            const response = await msalInstance.acquireTokenSilent(request);
+            return response.accessToken;
+        } catch (error) {
+            if (error instanceof msal.InteractionRequiredAuthError) {
+                // Fallback, pokud vypršela session
+                const response = await msalInstance.acquireTokenPopup(request);
+                return response.accessToken;
+            }
+            throw error;
+        }
+    }
+
+    // 5. ODESLÁNÍ ZPRÁVY A KOMUNIKACE S BACKENDEM
+    async function sendMessage() {
+      const promptEl = document.getElementById("prompt");
+      const sendBtn = document.getElementById("sendBtn");
+      const chatWindow = document.getElementById("chatWindow");
+      
+      const msg = promptEl.value.trim();
+      if (!msg || !activeAccount) return;
+
+      // Zablokování UI během čekání
+      promptEl.disabled = true;
+      sendBtn.disabled = true;
+      promptEl.value = "";
+
+      // Vykreslení uživatelské zprávy
+      const userInitials = activeAccount.name.substring(0,2).toUpperCase();
+      chatWindow.insertAdjacentHTML("beforeend", `
+        <div class="message user">
+          <div class="avatar">${userInitials}</div>
+          <div class="bubble"><p>${escapeHtml(msg)}</p></div>
+        </div>
+      `);
+      chatWindow.scrollTop = chatWindow.scrollHeight;
+
+      // Vykreslení "Typing" indikátoru
+      const typingId = "typing-" + Date.now();
+      chatWindow.insertAdjacentHTML("beforeend", `
+        <div class="message ai" id="${typingId}">
+          <div class="avatar">AI</div>
+          <div class="bubble"><div class="typing-indicator"><span></span><span></span><span></span></div></div>
+        </div>
+      `);
+      chatWindow.scrollTop = chatWindow.scrollHeight;
+
+      try {
+        const token = await getAccessToken();
+
+        const res = await fetch("/api/chat", {
+          method: "POST",
+          headers: { 
+              "Content-Type": "application/json", 
+              "Authorization": `Bearer ${token}` 
+          },
+          body: JSON.stringify({ messages: [{ role: "user", content: msg }] })
+        });
+
+        const data = await res.json();
+        const reply = data.response || data.choices?.[0]?.message?.content || "Chyba: Backend nevrátil validní data.";
+        
+        // Odstranění typing indikátoru a vypsání odpovědi
+        document.getElementById(typingId).remove();
+        chatWindow.insertAdjacentHTML("beforeend", `
+          <div class="message ai">
+            <div class="avatar">AI</div>
+            <div class="bubble"><p>${reply.replace(/\n/g, '<br>')}</p></div>
+          </div>
+        `);
+
+      } catch (error) {
+        document.getElementById(typingId).remove();
+        chatWindow.insertAdjacentHTML("beforeend", `
+          <div class="message ai">
+            <div class="avatar">AI</div>
+            <div class="bubble"><p style="color: var(--danger);">Kritická chyba spojení: ${error.message}</p></div>
+          </div>
+        `);
+      } finally {
+        // Odblokování UI
+        promptEl.disabled = false;
+        sendBtn.disabled = false;
+        promptEl.focus();
+        chatWindow.scrollTop = chatWindow.scrollHeight;
+      }
+    }
+
+    // 6. POMOCNÉ FUNKCE (UI a utilitky)
     function updateUI(account) {
         activeAccount = account;
         document.getElementById("uiName").innerText = account.name;
         document.getElementById("uiAv").innerText = account.name.substring(0,2).toUpperCase();
+        
         document.getElementById("loginBtn").style.display = "none";
         document.getElementById("clearBtn").style.display = "block";
+        
+        const promptEl = document.getElementById("prompt");
+        promptEl.disabled = false;
+        promptEl.placeholder = "Zadej dotaz pro analýzu...";
+        document.getElementById("sendBtn").disabled = false;
     }
 
-    async function sendMessage() {
-      const prompt = document.getElementById("prompt");
-      const msg = prompt.value.trim();
-      if (!msg || !activeAccount) return toast("Nejsi přihlášen!");
-
-      const tokenRes = await msalInstance.acquireTokenSilent({ scopes: ["https://ai.azure.com/.default"], account: activeAccount });
-      
-      const chatWindow = document.getElementById("chatWindow");
-      chatWindow.insertAdjacentHTML("beforeend", `<div class="message user"><div class="bubble"><p>${escapeHtml(msg)}</p></div></div>`);
-      prompt.value = "";
-
-      const res = await fetch("/api/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${tokenRes.accessToken}` },
-        body: JSON.stringify({ messages: [{ role: "user", content: msg }] })
-      });
-
-      const data = await res.json();
-      const reply = data.response || data.choices?.[0]?.message?.content || "Chyba backendu.";
-      chatWindow.insertAdjacentHTML("beforeend", `<div class="message ai"><div class="bubble"><p>${reply.replace(/\n/g, '<br>')}</p></div></div>`);
-      chatWindow.scrollTop = chatWindow.scrollHeight;
+    function handleEnter(e) {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        sendMessage();
+      }
     }
 
-    function renderWelcome() { document.getElementById("chatWindow").innerHTML = `<div class="message ai"><div class="bubble"><p>Vítej v POC pro Octavia. Přihlas se SSO vlevo.</p></div></div>`; }
-    function clearChat() { renderWelcome(); toast("Chat vyčištěn"); }
-    function toast(t) { const el = document.getElementById("toast"); el.textContent = t; el.classList.add("show"); setTimeout(() => el.classList.remove("show"), 2000); }
-    function escapeHtml(text) { const div = document.createElement("div"); div.textContent = text; return div.innerHTML; }
+    function renderWelcome() { 
+        document.getElementById("chatWindow").innerHTML = `
+        <div class="message ai">
+            <div class="avatar">AI</div>
+            <div class="bubble"><p>Vítej v POC pro Octavia. Přihlas se pomocí SSO v levém panelu pro spuštění analýzy.</p></div>
+        </div>`; 
+    }
+
+    function clearChat() { 
+        renderWelcome(); 
+        toast("Chat byl vyčištěn"); 
+    }
+
+    function toast(t) { 
+        const el = document.getElementById("toast"); 
+        el.textContent = t; 
+        el.classList.add("show"); 
+        setTimeout(() => el.classList.remove("show"), 2500); 
+    }
+
+    function escapeHtml(text) { 
+        const div = document.createElement("div"); 
+        div.textContent = text; 
+        return div.innerHTML; 
+    }
+
+    // Úvodní vykreslení
     renderWelcome();
   </script>
 </body>
