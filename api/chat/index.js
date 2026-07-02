@@ -16,7 +16,7 @@ module.exports = async function (context, req) {
                 "Authorization": authHeader,
                 "Content-Type": "application/json"
             },
-            // Nový formát pro Responses API
+            // Formát přesně podle Responses API
             body: JSON.stringify({ input: [{ role: "user", content: userMessage }] })
         });
 
@@ -30,21 +30,36 @@ module.exports = async function (context, req) {
             return;
         }
         
-        // Agresivní extrakce odpovědi (pokryje všechny verze Azure API)
-        let reply = "AI vygenerovalo prázdnou odpověď.";
+        let reply = "AI nevygenerovalo žádný text.";
+
         if (response.ok) {
-            reply = data?.output?.content 
-                 || data?.output 
-                 || data?.choices?.[0]?.message?.content 
-                 || data?.message?.content 
-                 || JSON.stringify(data, null, 2); // Když selže vše, vypíše krásně zformátovaný surový JSON
+            // Extrakce přesně podle tvé dokumentace (ResponseOutputMessage -> content -> text)
+            if (data?.output?.content && Array.isArray(data.output.content)) {
+                const textItem = data.output.content.find(item => item.text || item.type === "output_text");
+                if (textItem && textItem.text) {
+                    reply = textItem.text;
+                } else {
+                    reply = JSON.stringify(data.output.content); // Nouzové vypsání
+                }
+            } 
+            // Fallback na starý formát (pro jistotu)
+            else if (data?.choices?.[0]?.message?.content) {
+                reply = data.choices[0].message.content;
+            } 
+            // Pokud nic nesedí, pošleme kompletní JSON jako string
+            else {
+                reply = JSON.stringify(data, null, 2);
+            }
+        } else {
+            reply = `Zamítnuto agentem ${response.status}: ` + JSON.stringify(data);
         }
 
+        // Zásadní: Vždy odesíláme čistý String, aby frontend nespadl
         context.res = { 
             status: 200, 
-            body: { response: response.ok ? reply : (`Zamítnuto agentem ${response.status}: ` + JSON.stringify(data)) } 
+            body: { response: String(reply) } 
         };
     } catch (error) {
-        context.res = { status: 500, body: { response: "Kritická chyba: " + error.message } };
+        context.res = { status: 500, body: { response: "Kritická chyba backendu: " + error.message } };
     }
 };
