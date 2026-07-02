@@ -16,7 +16,6 @@ module.exports = async function (context, req) {
                 "Authorization": authHeader,
                 "Content-Type": "application/json"
             },
-            // Formát přesně podle Responses API
             body: JSON.stringify({ input: [{ role: "user", content: userMessage }] })
         });
 
@@ -33,28 +32,27 @@ module.exports = async function (context, req) {
         let reply = "AI nevygenerovalo žádný text.";
 
         if (response.ok) {
-            // Extrakce přesně podle tvé dokumentace (ResponseOutputMessage -> content -> text)
-            if (data?.output?.content && Array.isArray(data.output.content)) {
-                const textItem = data.output.content.find(item => item.text || item.type === "output_text");
-                if (textItem && textItem.text) {
-                    reply = textItem.text;
-                } else {
-                    reply = JSON.stringify(data.output.content); // Nouzové vypsání
+            // Přesná extrakce na základě tvého reálného JSON payloadu
+            if (data?.output && Array.isArray(data.output)) {
+                // 1. Najdeme objekt, který je typu "message" a role "assistant"
+                const assistantMsg = data.output.find(item => item.type === "message" && item.role === "assistant");
+                
+                if (assistantMsg && assistantMsg.content && Array.isArray(assistantMsg.content)) {
+                    // 2. Uvnitř najdeme samotný text
+                    const textItem = assistantMsg.content.find(c => c.type === "output_text" || c.text);
+                    if (textItem && textItem.text) {
+                        reply = textItem.text;
+                    }
                 }
             } 
-            // Fallback na starý formát (pro jistotu)
-            else if (data?.choices?.[0]?.message?.content) {
+            // Fallback pro jistotu
+            if (reply === "AI nevygenerovalo žádný text." && data?.choices?.[0]?.message?.content) {
                 reply = data.choices[0].message.content;
-            } 
-            // Pokud nic nesedí, pošleme kompletní JSON jako string
-            else {
-                reply = JSON.stringify(data, null, 2);
             }
         } else {
             reply = `Zamítnuto agentem ${response.status}: ` + JSON.stringify(data);
         }
 
-        // Zásadní: Vždy odesíláme čistý String, aby frontend nespadl
         context.res = { 
             status: 200, 
             body: { response: String(reply) } 
