@@ -16,7 +16,7 @@ module.exports = async function (context, req) {
                 "Authorization": authHeader,
                 "Content-Type": "application/json"
             },
-            // TADY JE TA ZMĚNA: Slovo "messages" jsme přepsali na "input" přesně podle požadavku Azure API
+            // Nový formát pro Responses API
             body: JSON.stringify({ input: [{ role: "user", content: userMessage }] })
         });
 
@@ -26,17 +26,18 @@ module.exports = async function (context, req) {
         try {
             data = JSON.parse(rawText);
         } catch (e) {
-            context.res = { status: 200, body: { response: `Chyba Foundry (Status: ${response.status}). Zpráva: ${rawText}` } };
+            context.res = { status: 200, body: { response: `Chyba formátu z Azure: ${rawText}` } };
             return;
         }
         
-        // Zkusíme vytáhnout odpověď z různých struktur, které nové API může používat
-        let reply = "Žádná textová odpověď od AI.";
+        // Agresivní extrakce odpovědi (pokryje všechny verze Azure API)
+        let reply = "AI vygenerovalo prázdnou odpověď.";
         if (response.ok) {
-            reply = data.choices?.[0]?.message?.content 
-                 || data.output 
-                 || data.text 
-                 || JSON.stringify(data); // Pokud se struktura odpovědi úplně změnila, aspoň ji rovnou uvidíme v chatu
+            reply = data?.output?.content 
+                 || data?.output 
+                 || data?.choices?.[0]?.message?.content 
+                 || data?.message?.content 
+                 || JSON.stringify(data, null, 2); // Když selže vše, vypíše krásně zformátovaný surový JSON
         }
 
         context.res = { 
