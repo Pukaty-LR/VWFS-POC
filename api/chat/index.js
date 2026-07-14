@@ -19,14 +19,20 @@ module.exports = async function (context, req) {
     const url = `https://vwfs-poc.services.ai.azure.com/api/projects/vwfs-poc/agents/${agentId}/endpoint/protocols/openai/responses?api-version=2025-11-15-preview`;
 
     try {
+        // Formátujeme zprávy do OpenAI formátu
+        const formattedMessages = messages.map(msg => ({
+            role: msg.role,
+            content: msg.content
+        }));
+
         const response = await fetch(url, {
             method: "POST",
             headers: {
                 "Authorization": authHeader,
                 "Content-Type": "application/json"
             },
-            // Posíláme celou historii (pole zpráv) pro udržení kontextu
-            body: JSON.stringify({ input: messages }) 
+            // Azure OpenAI endpoint očekává { messages: [...] }, ne { input: [...] }
+            body: JSON.stringify({ messages: formattedMessages }) 
         });
 
         const rawText = await response.text();
