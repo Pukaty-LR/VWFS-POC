@@ -25,14 +25,18 @@ module.exports = async function (context, req) {
             content: msg.content
         }));
 
+        // OPRAVA: Azure Responses API nyní expects 'input' místo 'messages'
+        const requestBody = {
+            input: formattedMessages
+        };
+
         const response = await fetch(url, {
             method: "POST",
             headers: {
                 "Authorization": authHeader,
                 "Content-Type": "application/json"
             },
-            // Azure OpenAI endpoint očekává { messages: [...] }, ne { input: [...] }
-            body: JSON.stringify({ messages: formattedMessages }) 
+            body: JSON.stringify(requestBody)
         });
 
         const rawText = await response.text();
